@@ -42,9 +42,9 @@ Walk object tree nodes and return a mutated copy.
 
 ```typescript
 const newObj = await traverse(oldObj, async (node: TraverseNode) => {
-  if (node.key === "__typename") {
+  if (node?.key === "__typename") {
     node.set(newValue);
-    node.stopWalk();
+    node.break();
   }
 });
 
