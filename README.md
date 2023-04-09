@@ -49,12 +49,14 @@ const newObj = await traverse(oldObj, async (node: TraverseNode) => {
 });
 
 interface TraverseNode {
-  parentKey?: string;
-  key: string;
+  parentKey?: string | number;
+  childKeys?: (string | number)[];
+  key?: string | number;
   value: any;
-  path: string[];
+  type: "array" | "object" | "value";
+  path: (string | number)[];
   set: (newValue: any) => void;
-  stopWalk: () => void;
+  break: () => void;
 }
 ```
 
