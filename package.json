@@ -1,0 +1,10 @@
+{
+  "name": "tskit",
+  "scripts": {
+    "test": "vitest",
+    "pretty": "npx prettier --write ."
+  },
+  "devDependencies": {
+    "vitest": "^0.29.8"
+  }
+}

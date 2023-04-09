@@ -1,18 +1,6 @@
-type ExecutionParams<T> = {
-    concurrent?: number;
-    retries?: number;
-    interval?: number;
-    timeout?: number;
-};
-
-type PromiseInQueue<T> = () => Promise<T>;
-
-type ResolveReturn<T> = {
-    results: T[];
-    errors: Error[];
-};
-
-export default function useAsyncQueue<T>(initialPromises: PromiseInQueue<T>[]) {
+export default function usePromisesQueue<T>(
+  initialPromises: PromiseInQueue<T>[]
+) {
   const promisesQueue: PromiseInQueue<T>[] = [...initialPromises];
 
   async function resolve(
@@ -111,3 +99,17 @@ export default function useAsyncQueue<T>(initialPromises: PromiseInQueue<T>[]) {
 
   return { resolve };
 }
+
+type ExecutionParams<T> = {
+  concurrent?: number;
+  retries?: number;
+  interval?: number;
+  timeout?: number;
+};
+
+type PromiseInQueue<T> = () => Promise<T>;
+
+type ResolveReturn<T> = {
+  results: T[];
+  errors: Error[];
+};
