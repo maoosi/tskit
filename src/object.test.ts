@@ -1,5 +1,5 @@
-import { describe, test, expect } from 'vitest'
-import { merge, traverse, clone, mapValues } from './object'
+import { describe, expect, test } from 'vitest'
+import { clone, mapValues, merge, walk } from './object'
 
 describe('object', () => {
     test('clone', () => {
@@ -25,28 +25,26 @@ describe('object', () => {
         expect(mapValues(users, 'age')).toStrictEqual({ 'fred': 40, 'pebbles': 1 })
     })
 
-    test('traverse', async () => {
+    test('walk', async () => {
         const d = new Date()
         const f = () => 2
         const obj1 = {
             a: 1,
-            b: { _t: 'old', c: 3, d: { e: { _t: 'old', f: { _t: 'old', g: 7 } } } },
-            c: [{ _t: 'old', i: [{ _t: 'old', j: { _t: 'old', k: 'hello' } }] }],
+            b: { _t: 'old', c: 3, z: { e: { _t: 'old', f: { _t: 'old', g: 7 } } } },
+            c: [{ _t: 'old', i: [{ _t: 'old', j: { _t: 'old', k: 'hello' } }] }, { x: 'y' }],
             d, f
         }
         const obj2 = {
             a: 1,
-            b: { _t: 'new', c: 3, d: { _e: { _t: 'new', f: { _t: 'new', g: 7 } } } },
-            c: [{ _t: 'new', i: [{ _t: 'old', j: { _t: 'old', k: 'hello' } }] }],
+            b: { _t: 'new', c: 3, z: { _e: { _t: 'new', f: { _t: 'new', g: 7 } } } },
+            c: [{ _t: 'new', i: [{ _t: 'old', j: { _t: 'old', k: 'hello' } }] }, { x: 'y' }],
             d, f
         }
-        expect(await traverse(obj1, async (node) => {
-            if (node.key === '_t') node.set('new')
-            if (node?.childKeys?.includes('e')) {
-                const { e, ...value } = node.value
-                node.set({ ...value, _e: node.value['e'] })
-            }
-            if (node.key === 'i') node.break()
+        expect(await walk(obj1, async ({ key, value }, node) => {
+            if (key === '_t') value = 'new'
+            if (key === 'e') key = '_e'
+            if (key === 'i') node.ignoreChilds()
+            return { key, value }
         })).toStrictEqual(obj2)
         expect(obj1).not.toStrictEqual(obj2)
     })

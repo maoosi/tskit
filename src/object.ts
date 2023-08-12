@@ -1,5 +1,4 @@
-import { isArray, isObject, isFunction } from './is'
-import { notNullish } from './guards'
+import { isArray, isFunction, isObject } from './is'
 
 /**
  * Create a new subset object by giving keys
@@ -112,97 +111,51 @@ function mergeWith<T extends object = object, S extends object = T>(target: T, .
 }
 
 /**
- * Traverse Oject Nodes
- *
- * @category Object
+ * Applies a mutation function to each key and value of an object recursively.
+ * Ensures immutability of the original object by returning a new, deeply-copied and mutated object.
+ * 
+ * @param {Object} obj - Original object.
+ * @param {Function} fn - Async mutator function, should return an object with potentially new key-value pair.
+ * @return {Object} - A new mutated object.
  */
-export async function traverse(
-    node: any,
-    callback: (node: Traverse) => Promise<void>,
-    parentKey?: string | number,
-    key?: string | number,
-    path: (string | number)[] = []
+export async function walk(
+    obj: any,
+    fn: (arg: { key: string, value: any }, node: WalkNode) => Promise<{ key: string, value: any }>,
+    node: WalkNode = new WalkNode()
 ): Promise<any> {
-    if (isArray(node)) {
-        let newArray: any[] = [...node]
-        let shouldContinue = true
-        const setFn = (newVal: any) => newArray = newVal
-        const breakFn = () => shouldContinue = false
-        const traverseNode: Traverse = {
-            parentKey,
-            childKeys: Array.from(Array(newArray.length).keys()),
-            key,
-            value: newArray,
-            type: 'array',
-            path: typeof key !== 'undefined' ? [...path, key] : [...path],
-            set: setFn,
-            break: breakFn,
+    const clonedObj = clone(obj);
+    const out: any = {};
+    const keys = Object.keys(clonedObj);
+
+    for (const key of keys) {
+        const newNode = new WalkNode([...node.path, key]);
+        let { key: newKey, value: newValue } = await fn({ key, value: clonedObj[key] }, newNode);
+
+        if (newValue && isObject(newValue) && !newNode.ignoreChildren) {
+            newValue = await walk(newValue, fn, newNode);
         }
-        await callback(traverseNode)
-        if (shouldContinue) {
-            for (let childKey = 0; childKey < node.length; childKey++) {
-                const childValue = node[childKey]
-                newArray[childKey] = await traverse(
-                    childValue,
-                    callback,
-                    key,
-                    childKey,
-                    typeof key !== 'undefined'
-                        ? [...path, key] : [...path],
-                )
+
+        else if (newValue && isArray(newValue) && !newNode.ignoreChildren) {
+            for (let idx = 0; idx < newValue.length; idx++) {
+                if (newValue[idx] && isObject(newValue[idx])) {
+                    newValue[idx] = await walk(newValue[idx], fn, new WalkNode([...newNode.path, idx]))
+                }
             }
         }
-        return newArray
+
+        out[newKey] = newValue;
     }
-    else if (isObject(node)) {
-        let newObject: any = { ...node }
-        let shouldContinue = true
-        const setFn = (newVal: any) => newObject = newVal
-        const breakFn = () => shouldContinue = false
-        const traverseNode: Traverse = {
-            parentKey,
-            childKeys: Object.keys(newObject),
-            key,
-            value: newObject,
-            type: 'object',
-            path: typeof key !== 'undefined'
-                ? [...path, key] : [...path],
-            set: setFn,
-            break: breakFn,
-        }
-        await callback(traverseNode)
-        if (shouldContinue) {
-            for (const [childKey, childValue] of Object.entries(newObject)) {
-                newObject[childKey] = await traverse(
-                    childValue,
-                    callback,
-                    key,
-                    childKey,
-                    typeof key !== 'undefined'
-                        ? [...path, key] : [...path],
-                )
-            }
-        }
-        return newObject
+
+    return out;
+}
+
+class WalkNode {
+    constructor(public path: (string | number)[] = [], public ignoreChildren: boolean = false) {
+        this.path = path
+        this.ignoreChildren = ignoreChildren
     }
-    else {
-        let newValue = node
-        const setFn = (newVal: any) => newValue = newVal
-        const breakFn = () => { }
-        const traverseNode: Traverse = {
-            parentKey,
-            childKeys: [],
-            key,
-            value: newValue,
-            type: 'value',
-            path: typeof key !== 'undefined'
-                ? [...path, key] : [...path],
-            set: setFn,
-            break: breakFn,
-        }
-        await callback(traverseNode)
-        return newValue
-    }
+    ignoreChilds() { this.ignoreChildren = true }
+    getPath() { return this.path }
 }
 
 function objectKeys<T extends object>(obj: T) {
@@ -227,14 +180,3 @@ type DeepMerge<F, S> = MergeInsertions<{
     ? F[K]
     : never;
 }>
-
-type Traverse = {
-    parentKey?: string | number;
-    childKeys?: (string | number)[];
-    key?: string | number;
-    value: any;
-    type: "array" | "object" | "value";
-    path: (string | number)[];
-    set: (newValue: any) => void;
-    break: () => void;
-}

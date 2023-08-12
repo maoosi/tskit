@@ -1,4 +1,4 @@
-import { isFunction, isObject } from './is'
+import { isFunction, isObject } from './is';
 import { clone } from './object';
 
 /**
@@ -44,16 +44,33 @@ export function uniqBy<T>(array: readonly T[], iteratee: keyof T | ((a: any) => 
 }
 
 /**
- * Creates a 
+ * Return a copy ordered by iteratee
  *
  * @category Array
  */
-export function orderBy<T>(array: readonly T[], keys: (keyof T)[], order?: ('asc' | 'desc')[]): T[] {
+export function orderBy<T>(
+    array: readonly T[],
+    iteratee: ((keyof T) | ((a: T) => any)) | ((keyof T) | ((a: T) => any))[],
+    order?: ('asc' | 'desc') | ('asc' | 'desc')[]
+): T[] {
     let arr = copy(array)
-    for (let i = keys.length - 1; i >= 0; i--) {
-        arr.sort(sortBy<T>(keys[i], order?.[i] || 'asc'))
+    const iterateeArr = Array.isArray(iteratee) ? iteratee : [iteratee]
+    const orderArr = Array.isArray(order) ? order : [order]
+    for (let i = iterateeArr.length - 1; i >= 0; i--) {
+        arr.sort(sortBy<T>(iterateeArr[i], orderArr?.[i] || 'asc'))
     }
     return arr
+}
+
+function sortBy<T>(key: keyof T | ((a: T) => any), order: 'asc' | 'desc') {
+    const gt = order === 'asc' ? 1 : -1
+    const lt = order === 'asc' ? -1 : 1
+    const fn = isFunction(key)
+    return (a: T, b: T) => {
+        const l = fn ? key(a) : a[key]
+        const r = fn ? key(b) : b[key]
+        return (l > r) ? gt : ((r > l) ? lt : 0)
+    }
 }
 
 /**
@@ -62,7 +79,7 @@ export function orderBy<T>(array: readonly T[], keys: (keyof T)[], order?: ('asc
  * @category Array
  */
 export function copy<T>(array: readonly T[]): T[] {
-    return array.map(item => isObject(item) ? clone(item) : item) as T[]
+    return (array?.map(item => isObject(item) ? clone(item) : item) || []) as T[]
 }
 
 /**
@@ -70,13 +87,9 @@ export function copy<T>(array: readonly T[]): T[] {
  *
  * @param arr
  * @param quantity - quantity of random items which will be returned
+ * 
+ * @category Array
  */
 export function sample<T>(arr: T[], quantity?: number) {
     return Array.from({ length: quantity || 1 }, _ => arr[Math.round(Math.random() * (arr.length - 1))])
-}
-
-function sortBy<T>(key: keyof T, order: 'asc' | 'desc') {
-    const gt = order === 'asc' ? 1 : -1
-    const lt = order === 'asc' ? -1 : 1
-    return (a: T, b: T) => (a[key] > b[key]) ? gt : ((b[key] > a[key]) ? lt : 0)
 }

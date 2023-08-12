@@ -50,5 +50,17 @@ describe('array', () => {
             { 'user': 'barney1', 'age': 34 },
             { 'user': 'barney2', 'age': 34 },
         ])
+        const nested = [
+            { 'user': 'fred', 'nested': { 'age': 48 } },
+            { 'user': 'barney1', 'nested': { 'age': 34 } },
+            { 'user': 'fred', 'nested': { 'age': 40 } },
+            { 'user': 'barney2', 'nested': { 'age': 34 } },
+        ]
+        expect(orderBy(nested, [item => item.nested.age, 'user'], ['asc', 'desc'])).toStrictEqual([
+            { 'user': 'barney2', 'nested': { 'age': 34 } },
+            { 'user': 'barney1', 'nested': { 'age': 34 } },
+            { 'user': 'fred', 'nested': { 'age': 40 } },
+            { 'user': 'fred', 'nested': { 'age': 48 } },
+        ])
     })
 })
